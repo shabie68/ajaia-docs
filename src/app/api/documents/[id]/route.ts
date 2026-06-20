@@ -33,7 +33,7 @@ export async function GET(
         email: document.owner.email,
         avatar: document.owner.avatar,
       },
-      sharedWith: document.shares.map((s) => ({
+      sharedWith: document.shares.map((s: any) => ({
         userId: s.user.id,
         name: s.user.name,
         email: s.user.email,
