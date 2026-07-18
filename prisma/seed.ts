@@ -1,36 +1,45 @@
 import { PrismaClient } from '@prisma/client'
 import { PrismaBetterSqlite3 } from '@prisma/adapter-better-sqlite3'
+import { hash } from 'bcryptjs' // ✅ Import hash function
 
 const adapter = new PrismaBetterSqlite3({ url: 'file:./prisma/dev.db' })
 const prisma = new PrismaClient({ adapter })
 
 async function main() {
-  const alice = await prisma.user.upsert({
-    where: { email: 'alice@ajaia.test' },
-    update: {},
-    create: {
+  // Clean up
+  await prisma.document.deleteMany();
+  await prisma.documentShare.deleteMany();
+  await prisma.user.deleteMany();
+
+  // Hash the password "password123" for our mock users
+  const hashedPassword = await hash('password123', 12);
+
+  const alice = await prisma.user.create({
+    data: {
+      id: 'alice',
       email: 'alice@ajaia.test',
       name: 'Alice Johnson',
+      password: hashedPassword, // ✅ Store hashed password
       avatar: '#4F46E5',
     },
   })
 
-  const bob = await prisma.user.upsert({
-    where: { email: 'bob@ajaia.test' },
-    update: {},
-    create: {
+  const bob = await prisma.user.create({
+    data: {
+      id: 'bob',
       email: 'bob@ajaia.test',
       name: 'Bob Smith',
+      password: hashedPassword, // ✅ Store hashed password
       avatar: '#059669',
     },
   })
 
-  const carol = await prisma.user.upsert({
-    where: { email: 'carol@ajaia.test' },
-    update: {},
-    create: {
+  const carol = await prisma.user.create({
+    data: {
+      id: 'carol',
       email: 'carol@ajaia.test',
       name: 'Carol Davis',
+      password: hashedPassword, // ✅ Store hashed password
       avatar: '#DC2626',
     },
   })
@@ -40,34 +49,7 @@ async function main() {
       title: 'Project Requirements',
       content: JSON.stringify({
         type: 'doc',
-        content: [
-          {
-            type: 'heading',
-            attrs: { level: 1 },
-            content: [{ type: 'text', text: 'Project Requirements' }],
-          },
-          {
-            type: 'paragraph',
-            content: [
-              { type: 'text', text: 'This is a ' },
-              { type: 'text', text: 'sample document', marks: [{ type: 'bold' }] },
-              { type: 'text', text: ' to demonstrate the editor.' },
-            ],
-          },
-          {
-            type: 'bulletList',
-            content: [
-              {
-                type: 'listItem',
-                content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Feature one' }] }],
-              },
-              {
-                type: 'listItem',
-                content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Feature two' }] }],
-              },
-            ],
-          },
-        ],
+        content: [{ type: 'paragraph' }],
       }),
       ownerId: alice.id,
     },
@@ -81,9 +63,8 @@ async function main() {
     },
   })
 
-  console.log('✅ Seeded database with:')
-  console.log(`   - Users: ${alice.email}, ${bob.email}, ${carol.email}`)
-  console.log(`   - Sample document: "${doc.title}" (shared with Bob)`)
+  console.log('✅ Seeded database with passwords!');
+  console.log(`   - Try logging in as: alice@ajaia.test / password123`);
 }
 
 main()

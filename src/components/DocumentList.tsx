@@ -20,8 +20,12 @@ export default function DocumentList() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`/api/documents?userId=${user.email}`);
-      if (!res.ok) throw new Error('Failed to fetch');
+      const res = await fetch(`/api/documents?userId=${user.id}`);
+      // if (!res.ok) throw new Error('Failed to fetch');
+      if (!res.ok) {
+  const errorText = await res.text();
+  throw new Error(`Failed to fetch [${res.status}]: ${errorText}`);
+}
       const data = await res.json();
       setDocuments(data);
     } catch (err) {

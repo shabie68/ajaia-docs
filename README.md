@@ -1,36 +1,50 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+Ajaia Docs
+A lightweight, AI-native collaborative document editor built for the Ajaia LLC Full Stack assignment.
 
-## Getting Started
+Features
+Rich Text Editing: Headings, bold, italic, underline, lists, blockquotes, and code blocks.
+File Import: Upload .txt or .md files to instantly create editable documents.
+Sharing: Share documents with other users (View or Edit permissions).
+Persistence: SQLite database preserves documents and sharing state locally.
+Auto-save: Documents save automatically 2 seconds after edits.
+Tech Stack
+Frontend: Next.js 14 (App Router), Tailwind CSS, TipTap Editor
+Backend: Next.js API Routes
+Database: SQLite via Prisma ORM
+Testing: Vitest
 
-First, run the development server:
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+Getting Started
+Prerequisites
+Node.js 18+
+npm
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Installation
+git clone https://github.com/shabie68/ajaia-docs.git 
+cd ajaia-docsnpm install
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Setup Database
+npx prisma db push
+npx prisma db seed
 
-## Learn More
+Run Development Server
 
-To learn more about Next.js, take a look at the following resources:
+Open http://localhost:3000
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Run Tests
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+npm test
 
-## Deploy on Vercel
+Test Accounts
+Name
+Email
+Role
+Avatar
+Alice Johnson	alice@ajaia.test	Product Manager	Indigo
+Bob Smith	bob@ajaia.test	Engineer	Green
+Carol Davis	carol@ajaia.test	Designer	Red
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Supported File Types
+.txt (Plain text)
+.md (Markdown - parses headings and paragraphs)

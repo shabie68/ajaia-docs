@@ -1,97 +1,159 @@
 'use client';
 
-import { useAuth } from '@/context/AuthContext';
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
-
-const USERS = [
-  { id: 'alice', email: 'alice@ajaia.test', name: 'Alice Johnson', avatar: '#4F46E5', role: 'Product Manager' },
-  { id: 'bob', email: 'bob@ajaia.test', name: 'Bob Smith', avatar: '#059669', role: 'Engineer' },
-  { id: 'carol', email: 'carol@ajaia.test', name: 'Carol Davis', avatar: '#DC2626', role: 'Designer' },
-];
+import { signIn } from 'next-auth/react';
+import { toast } from 'sonner';
 
 export default function LoginPage() {
-  const { login, user, isLoading } = useAuth();
   const router = useRouter();
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  useEffect(() => {
-    if (!isLoading && user) {
-      router.push('/dashboard');
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const result = await signIn('credentials', {
+        email,
+        password,
+        redirect: false,
+      });
+
+      if (result?.error) {
+        toast.error('Invalid email or password');
+      } else {
+        toast.success('Welcome back!');
+        router.push('/dashboard');
+        router.refresh();
+      }
+    } catch (error) {
+      toast.error('Something went wrong');
+    } finally {
+      setLoading(false);
     }
-  }, [user, isLoading, router]);
+  };
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
-        <div className="animate-pulse text-gray-400">Loading...</div>
-      </div>
-    );
-  }
+  const fillTestUser = (testEmail: string) => {
+    setEmail(testEmail);
+    setPassword('password123');
+  };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-emerald-50 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Logo / Branding */}
+    <div className="min-h-screen flex flex-col justify-center items-center px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-slate-50 to-indigo-50/50">
+      
+      {/* Main Card */}
+      <div className="w-full max-w-[400px] animate-in fade-in zoom-in-95 duration-500">
+        
+        {/* Header Section */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-indigo-600 text-white text-2xl font-bold mb-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-600 text-white text-2xl font-bold shadow-lg shadow-indigo-200 mb-5">
             A
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Ajaia Docs</h1>
-          <p className="text-gray-500 mt-1">Lightweight collaborative document editor</p>
+          <h1 className="text-2xl font-bold tracking-tight text-slate-900">
+            Welcome to Ajaia Docs
+          </h1>
+          <p className="mt-2 text-sm text-slate-500 leading-relaxed">
+            Sign in to your account to continue
+          </p>
         </div>
 
-        {/* User Selection Card */}
-        <div className="bg-white rounded-2xl shadow-sm border border-gray-200 p-6">
-          <h2 className="text-lg font-semibold text-gray-900 mb-1">Sign in</h2>
-          <p className="text-sm text-gray-500 mb-6">
-            Select a test account to continue. This simulates authentication for the assignment.
-          </p>
+        {/* Form Card */}
+        <div className="bg-white rounded-2xl shadow-xl shadow-slate-200/50 border border-slate-100 p-8">
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            
+            {/* Email Field */}
+            <div className="space-y-1.5">
+              <label htmlFor="email" className="block text-sm font-medium text-slate-700">
+                Email
+              </label>
+              <input
+                id="email"
+                name="email"
+                type="email"
+                autoComplete="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="block w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                placeholder="name@company.com"
+              />
+            </div>
 
-          <div className="space-y-3">
-            {USERS.map((u) => (
+            {/* Password Field */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <label htmlFor="password" className="block text-sm font-medium text-slate-700">
+                  Password
+                </label>
+                <button type="button" className="text-xs font-medium text-indigo-600 hover:text-indigo-500">
+                  Forgot password?
+                </button>
+              </div>
+              <input
+                id="password"
+                name="password"
+                type="password"
+                autoComplete="current-password"
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="block w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3.5 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all duration-200"
+                placeholder="••••••••"
+              />
+            </div>
+
+            {/* Submit Button */}
+            <button
+              type="submit"
+              disabled={loading}
+              className="relative w-full flex justify-center items-center rounded-lg bg-indigo-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-indigo-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-70 disabled:cursor-not-allowed transition-all duration-200 overflow-hidden"
+            >
+              {loading ? (
+                <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+              ) : (
+                'Continue'
+              )}
+            </button>
+          </form>
+
+          {/* Separator */}
+          <div className="relative my-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-100" />
+            </div>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-white px-3 text-slate-400 uppercase tracking-wider">
+                Dev Environment
+              </span>
+            </div>
+          </div>
+
+          {/* Quick Login Buttons */}
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { name: 'Alice', email: 'alice@ajaia.test', color: 'bg-indigo-50 text-indigo-700 hover:bg-indigo-100 border-indigo-100' },
+              { name: 'Bob', email: 'bob@ajaia.test', color: 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border-emerald-100' },
+              { name: 'Carol', email: 'carol@ajaia.test', color: 'bg-rose-50 text-rose-700 hover:bg-rose-100 border-rose-100' },
+            ].map((user) => (
               <button
-                key={u.id}
-                onClick={() => login(u)}
-                className="w-full flex items-center gap-4 p-4 rounded-xl border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50/50 transition-all group text-left"
+                key={user.email}
+                type="button"
+                onClick={() => fillTestUser(user.email)}
+                className={`flex flex-col items-center justify-center py-2.5 px-2 rounded-lg border text-xs font-medium transition-colors duration-200 ${user.color}`}
               >
-                {/* Avatar */}
-                <div
-                  className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg shrink-0"
-                  style={{ backgroundColor: u.avatar }}
-                >
-                  {u.name[0]}
-                </div>
-
-                {/* Info */}
-                <div className="flex-1 min-w-0">
-                  <div className="font-medium text-gray-900 group-hover:text-indigo-700 transition-colors">
-                    {u.name}
-                  </div>
-                  <div className="text-sm text-gray-500 truncate">{u.email}</div>
-                </div>
-
-                {/* Role badge */}
-                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-gray-100 text-gray-600 shrink-0">
-                  {u.role}
-                </span>
-
-                {/* Arrow */}
-                <svg
-                  className="w-5 h-5 text-gray-300 group-hover:text-indigo-500 transition-colors shrink-0"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                </svg>
+                <span className="font-bold">{user.name[0]}</span>
+                <span className="mt-0.5 opacity-80">{user.name}</span>
               </button>
             ))}
           </div>
         </div>
 
-        {/* Footer note */}
-        <p className="text-center text-xs text-gray-400 mt-6">
-          Assignment by Shabie Ul Hassan · Mock auth for demo purposes
+        {/* Footer Text */}
+        <p className="mt-6 text-center text-xs text-slate-400">
+          By continuing, you agree to our Terms of Service and Privacy Policy.
         </p>
       </div>
     </div>

@@ -1,59 +1,62 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { useSession } from 'next-auth/react';
 
-export interface AuthUser {
+interface AuthUser {
   id: string;
   email: string;
   name: string;
-  avatar: string;
+  avatar?: string | null;
 }
 
 interface AuthContextType {
   user: AuthUser | null;
-  login: (user: AuthUser) => void;
-  logout: () => void;
   isLoading: boolean;
+  logout: () => void;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  isLoading: true,
+  logout: () => {},
+});
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check localStorage for saved session
-    const saved = localStorage.getItem('ajaia_user');
-    if (saved) {
-      try {
-        setUser(JSON.parse(saved));
-      } catch {
-        localStorage.removeItem('ajaia_user');
-      }
+    // Give it a brief moment to check session on mount
+    if (status !== 'loading') {
+      setIsLoading(false);
     }
-    setIsLoading(false);
-  }, []);
+  }, [status]);
 
-  const login = (userData: AuthUser) => {
-    setUser(userData);
-    localStorage.setItem('ajaia_user', JSON.stringify(userData));
-  };
-
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('ajaia_user');
+  const logout = async () => {
+    // We will import signOut from next-auth/react in the components that need it
+    // For the context, we just trigger a redirect
+    window.location.href = '/api/auth/signout';
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider
+      value={{
+        user: session?.user
+          ? {
+              id: session.user.id,
+              email: session.user.email!,
+              name: session.user.name!,
+              avatar: session.user.avatar,
+            }
+          : null,
+        isLoading,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuth() {
-  const context = useContext(AuthContext);
-  if (!context) throw new Error('useAuth must be used within AuthProvider');
-  return context;
-}
+export const useAuth = () => useContext(AuthContext);

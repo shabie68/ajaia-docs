@@ -91,10 +91,13 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     const { userId, title, content } = body;
+    console.log("GLOBALL")
+    console.log(body)
 
     if (!userId || !title) {
       return NextResponse.json({ error: 'userId and title are required' }, { status: 400 });
     }
+    
 
     const user = await prisma.user.findFirst({
       where: {
