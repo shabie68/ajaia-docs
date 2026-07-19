@@ -3,15 +3,15 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Document, DocumentsResponse } from '@/types/document';
+import { DocumentsResponse } from '@/types/document';
 import { formatDistanceToNow } from 'date-fns';
+import { api } from '@/lib/api';
 
 export default function DocumentList() {
   const { user } = useAuth();
   const router = useRouter();
   const [documents, setDocuments] = useState<DocumentsResponse | null>(null);
   const [loading, setLoading] = useState(true);
-  const [creating, setCreating] = useState(false);
   const [activeTab, setActiveTab] = useState<'owned' | 'shared'>('owned');
   const [error, setError] = useState<string | null>(null);
 
@@ -20,16 +20,12 @@ export default function DocumentList() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch(`/api/documents?userId=${user.id}`);
-      // if (!res.ok) throw new Error('Failed to fetch');
-      if (!res.ok) {
-  const errorText = await res.text();
-  throw new Error(`Failed to fetch [${res.status}]: ${errorText}`);
-}
-      const data = await res.json();
+      
+      // ✅ The api client already parses the JSON and checks for errors!
+      const data = await api.getDocuments(user.id);
       setDocuments(data);
-    } catch (err) {
-      setError('Could not load documents. Please refresh.');
+    } catch (err: any) {
+      setError(err.message || 'Could not load documents.');
       console.error(err);
     } finally {
       setLoading(false);
@@ -42,24 +38,16 @@ export default function DocumentList() {
 
   const handleCreate = async () => {
     if (!user) return;
-    setCreating(true);
     try {
-      const res = await fetch('/api/documents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.email,
-          title: 'Untitled Document',
-        }),
+      // ✅ Use the api client for creating too
+      const doc = await api.createDocument({ 
+        userId: user.id, // Make sure to use .id now!
+        title: 'Untitled Document' 
       });
-      if (!res.ok) throw new Error('Failed to create');
-      const doc = await res.json();
       router.push(`/editor/${doc.id}`);
-    } catch (err) {
-      setError('Could not create document.');
+    } catch (err: any) {
+      setError(err.message || 'Could not create document.');
       console.error(err);
-    } finally {
-      setCreating(false);
     }
   };
 
@@ -67,11 +55,11 @@ export default function DocumentList() {
     e.stopPropagation();
     if (!confirm('Delete this document? This cannot be undone.')) return;
     try {
-      const res = await fetch(`/api/documents/${docId}`, { method: 'DELETE' });
-      if (!res.ok) throw new Error('Failed to delete');
-      fetchDocuments();
-    } catch (err) {
-      setError('Could not delete document.');
+      // ✅ Use the api client for deleting
+      await api.deleteDocument(docId);
+      fetchDocuments(); // Refresh the list
+    } catch (err: any) {
+      setError(err.message || 'Could not delete document.');
       console.error(err);
     }
   };
@@ -141,7 +129,7 @@ export default function DocumentList() {
       {/* Document list */}
       {currentList && currentList.length > 0 ? (
         <div className="space-y-2">
-          {currentList.map((doc) => (
+          {currentList.map((doc: any) => (
             <div
               key={doc.id}
               onClick={() => handleOpen(doc.id)}

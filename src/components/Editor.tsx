@@ -1,27 +1,49 @@
 'use client';
-
+// ❌ DELETED: import * as Y from 'yjs';
+import Collaboration from '@tiptap/extension-collaboration';
+// import CollaborationCursor from '@tiptap/extension-collaboration-cursor';
+// ❌ DELETED: import { WebsocketProvider } from 'y-websocket';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Underline from '@tiptap/extension-underline';
 import TextAlign from '@tiptap/extension-text-align';
 import { useEffect, useRef } from 'react';
 
+// ✅ Updated Interface (changed Y.Doc to any)
 interface EditorProps {
   content: string;
   editable?: boolean;
   onUpdate?: (json: string) => void;
+  ydoc?: any | null;       // ✅ Changed from Y.Doc
+  provider?: any | null; 
+  user?: { name: string; color: string } | null;
+  documentId?: string;
+  ownerId?: string;
 }
 
-export default function Editor({ content, editable = true, onUpdate }: EditorProps) {
+export default function Editor({ content, editable = true, onUpdate, ydoc, provider, user, documentId, ownerId }: EditorProps) {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const isCollaborating = !!ydoc && !!provider;
+  const lastSyncedContent = useRef<string>('');
 
-  const editor = useEditor({
+    const editor = useEditor({
+    immediatelyRender: false,
     extensions: [
       StarterKit.configure({
         heading: { levels: [1, 2, 3] },
+        // @ts-expect-error - history is a valid StarterKit config option to disable local undo/redo for Collaboration
+        history: false, 
       }),
-      Underline,
       TextAlign.configure({ types: ['heading', 'paragraph'] }),
+      
+      ...(isCollaborating
+        ? [
+            Collaboration.configure({
+              document: ydoc,
+              provider: provider, 
+            }),
+          ]
+        : []),
     ],
     content: parseContent(content),
     editable,
@@ -31,22 +53,67 @@ export default function Editor({ content, editable = true, onUpdate }: EditorPro
       },
     },
     onUpdate: ({ editor }) => {
+      // When collaborating, we need to sync Y.js changes to the database
+      if (isCollaborating && ydoc) {
+        const currentContent = JSON.stringify(editor.getJSON());
+        
+        // Only trigger save if content has actually changed
+        if (currentContent !== lastSyncedContent.current) {
+          if (onUpdate) {
+            onUpdate(currentContent);
+          }
+          lastSyncedContent.current = currentContent;
+        }
+        return;
+      }
+      
+      // For non-collaborative mode, use the regular update handler
       if (onUpdate) {
         onUpdate(JSON.stringify(editor.getJSON()));
       }
     },
   });
 
-  // Update content when prop changes
+  // Listen for Y.js changes and trigger updates
   useEffect(() => {
-    if (editor && content) {
+    if (!isCollaborating || !ydoc || !onUpdate) return;
+
+    const handleChange = () => {
+      const json = ydoc.getMap('content').toJSON();
+      const contentString = JSON.stringify(json);
+      
+      // Only trigger save if content has actually changed
+      if (contentString !== lastSyncedContent.current) {
+        onUpdate(contentString);
+        lastSyncedContent.current = contentString;
+      }
+    };
+
+    ydoc.on('update', handleChange);
+    return () => {
+      ydoc.off('update', handleChange);
+    };
+  }, [isCollaborating, ydoc, onUpdate]);
+
+  // Update content when prop changes (only if NOT collaborating)
+  useEffect(() => {
+    if (editor && content && !isCollaborating) {
       const currentJson = JSON.stringify(editor.getJSON());
       const newJson = JSON.stringify(parseContent(content));
       if (currentJson !== newJson) {
         editor.commands.setContent(parseContent(content));
       }
     }
-  }, [content, editor]);
+  }, [content, editor, isCollaborating]);
+
+  // Clean up timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
 
   if (!editor) {
     return (

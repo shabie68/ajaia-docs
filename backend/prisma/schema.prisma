@@ -1,0 +1,65 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  // url removed - now in prisma.config.ts
+}
+
+model User {
+  id        String     @id @default(uuid())
+  email     String     @unique
+  name      String
+  password  String?
+  avatar    String?
+  createdAt DateTime   @default(now())
+
+  ownedDocuments   Document[]       @relation("DocumentOwner")
+  sharedDocuments  DocumentShare[]  @relation("SharedWith")
+}
+
+model Document {
+  id        String   @id @default(uuid())
+  title     String   @default("Untitled Document")
+  content   String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ownerId String  @map("owner_id")
+  owner   User    @relation("DocumentOwner", fields: [ownerId], references: [id])
+
+  shares  DocumentShare[]
+  files   FileAttachment[]
+
+  @@map("documents")
+}
+
+model DocumentShare {
+  id         String   @id @default(uuid())
+  documentId String   @map("document_id")
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  userId     String   @map("user_id")
+  user       User     @relation("SharedWith", fields: [userId], references: [id])
+  permission String   @default("view")
+  sharedAt   DateTime @default(now())
+
+  @@unique([documentId, userId])
+  @@map("document_shares")
+}
+
+model FileAttachment {
+  id         String    @id @default(uuid())
+  filename   String
+  mimeType   String
+  size       Int
+  filePath   String
+
+  documentId String?   @map("document_id")
+  document   Document? @relation(fields: [documentId], references: [id], onDelete: SetNull)
+
+  uploadedBy String    @map("uploaded_by")
+  uploadedAt DateTime  @default(now())
+
+  @@map("file_attachments")
+}
