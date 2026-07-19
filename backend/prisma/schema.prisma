@@ -3,7 +3,10 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  //for local
+  //provider = "sqlite"
+  //for production
+  provider = "postgresql"
   // url removed - now in prisma.config.ts
 }
 
