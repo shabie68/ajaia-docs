@@ -5,6 +5,7 @@
 //   documentId: string;
 // }
 
+
 // export default function ContentDebugger({ content, documentId }: ContentDebuggerProps) {
 //   return (
 //     <div className="border border-red-500 p-4 mb-4 rounded">
