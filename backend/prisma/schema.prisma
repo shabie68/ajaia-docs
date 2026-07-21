@@ -2,16 +2,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
-//datasource db {
+datasource db {
   //for local
   //provider = "sqlite"
-  //for production
+  provider = "postgresql"
   // url removed - now in prisma.config.ts
-//}
-
-datasource db {
-  provider  = "postgresql"
 }
+
 
 model User {
   id        String     @id @default(uuid())
