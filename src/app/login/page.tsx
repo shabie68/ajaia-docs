@@ -14,8 +14,6 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    console.log("HERE ARE WE")
-    console.log(process.env.DATABASE_URL)
 
     try {
       const result = await signIn('credentials', {
