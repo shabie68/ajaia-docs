@@ -14,6 +14,11 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    console.log({
+  POSTGRES_PRISMA_URL: process.env.POSTGRES_PRISMA_URL ? "set" : "missing",
+  POSTGRES_URL_NON_POOLING: process.env.POSTGRES_URL_NON_POOLING ? "set" : "missing",
+  DATABASE_URL: process.env.DATABASE_URL ? "set" : "missing",
+});
 
     try {
       const result = await signIn('credentials', {
