@@ -6,7 +6,7 @@ async function bootstrap() {
 
   // ✅ Updated CORS for both HTTP and WebSockets
   app.enableCors({
-    origin: ['http://localhost:3000', 'http://192.168.1.17:3000'],
+    origin: ['http://localhost:3000', 'http://192.168.1.17:3000', 'https://ajaia-docs-9rtr-6jegn94p3-gorgeous1.vercel.app'],
     credentials: true,
     methods: ['GET', 'POST', 'PATCH', 'DELETE', 'PUT'],
   });
