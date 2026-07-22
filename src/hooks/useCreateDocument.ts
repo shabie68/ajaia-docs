@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { api } from '@/lib/api';
 
 const DEFAULT_DOC_TITLE = 'Untitled Document';
 
@@ -13,18 +14,7 @@ export function useCreateDocument() {
     setCreating(true);
 
     try {
-      const res = await fetch('/api/documents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId,
-          title: title ?? DEFAULT_DOC_TITLE,
-        }),
-      });
-
-      if (!res.ok) throw new Error('Failed to create');
-
-      const doc = await res.json();
+      const doc = await api.createDocument({ userId, title: title ?? 'Untitled Document' });
       router.push(`/editor/${doc.id}`);
     } catch (err) {
       console.error(err);

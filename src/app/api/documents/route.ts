@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-
+//added for vercel 
+export const dynamic = 'force-dynamic';
 // GET /api/documents?userId=xxx
 export async function GET(request: NextRequest) {
   try {

@@ -5,20 +5,41 @@ import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { toast } from 'sonner';
-import Editor from '@/components/Editor';
 import { Document } from '@/types/document';
 import ShareModal from '@/components/ShareModal';
 import { useAutoSave } from '@/hooks/useAutoSave';
 import { useOnlineStatus } from '@/hooks/useOnlineStatus';
 import { signOut } from 'next-auth/react';
+import { api } from '@/lib/api'; 
+import { useDocSync } from '@/hooks/useDocSync';
+// import { useYjsProvider } from '@/hooks/useYjsProvider';
+import dynamic from 'next/dynamic'; // ✅ ONLY ONE dynamic import
 
 const AUTO_SAVE_DELAY = 2000;
+
+// ✅ Since Editor has ssr: false, Yjs will ONLY load inside the browser
+const Editor = dynamic(() => import('@/components/Editor'), { 
+  ssr: false,
+  loading: () => (
+    <div className="flex items-center justify-center py-32">
+      <div className="animate-pulse text-gray-400">Loading editor...</div>
+    </div>
+  )
+});
+
+const useYjsProvider = dynamic(
+  () => import('@/hooks/useYjsProvider').then(mod => mod.useYjsProvider),
+  { ssr: false }
+);
 
 export default function EditorPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
   const { user, isLoading: authLoading } = useAuth();
   const router = useRouter();
   const isOnline = useOnlineStatus();
+  const { ydoc, provider } = useYjsProvider(id, user ? { id: user.id, name: user.name, color: user.avatar || '#4F46E5' } : null);
+  // Inside the component:
+  
 
   // Document state
   const [document, setDocument] = useState<Document | null>(null);
@@ -26,6 +47,7 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  // const { isSyncing } = useDocSync(id, document?.ownerId || '', isEditing);
 
   // Auto-save hook
   const {
@@ -38,58 +60,49 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
     clearError: clearSaveError,
   } = useAutoSave({ docId: id, delay: AUTO_SAVE_DELAY });
 
+  // Add this ref at the top of your component
+const userIdRef = useRef<string | undefined>(undefined);
+useEffect(() => {
+  if (user) userIdRef.current = user.id;
+}, [user]);
   // Sync save errors to main error state
   useEffect(() => {
     if (saveError) setError(saveError);
   }, [saveError]);
 
   // Fetch document
-  const fetchDocument = useCallback(async () => {
-    if (!id) return;
+   //Update fetchDocument to use the ref, and REMOVE 'user' from dependencies
+const fetchDocument = useCallback(async () => {
+  const currentUserId = userIdRef.current;
+  if (!id || !currentUserId) return;
+  
+  let cancelled = false;
+  try {
+    setLoading(true);
+    setError(null);
+    const data = await api.getDocument(id, currentUserId); // ✅ Use ref
     
-    let cancelled = false;
-    
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const res = await fetch(`/api/documents/${id}`);
-      
-      if (cancelled) return;
-      
-      if (res.status === 404) {
-        setError('Document not found');
-        return;
-      }
-      
-      if (!res.ok) throw new Error('Failed to fetch');
-      
-      const data = await res.json();
-      
-      if (cancelled) return;
-      
-      setDocument(data);
-      setLastSavedState(new Date(data.updatedAt));
+    if (cancelled) return;
+    setDocument(data);
+    setLastSavedState(new Date(data.updatedAt));
 
-      // Check permissions
-      const isOwner = data.owner.email === user?.email;
-      const myShare = data.sharedWith?.find(
-        (s: { email: string; permission: string }) => s.email === user?.email
-      );
-      const hasEditPermission = myShare?.permission === 'edit';
-      
-      setIsEditing(isOwner || hasEditPermission || false);
-    } catch (err) {
-      if (!cancelled) {
-        setError('Could not load document.');
-        console.error(err);
-      }
-    } finally {
-      if (!cancelled) setLoading(false);
-    }
-
-    return () => { cancelled = true; };
-  }, [id, user]);
+    const isOwner = data.owner.id === currentUserId; // ✅ Use ref
+    const myShare = data.sharedWith?.find(
+      (s: { userId: string; permission: string }) => s.userId === currentUserId
+    );
+    const hasEditPermission = myShare?.permission === 'edit';
+    setIsEditing(isOwner || hasEditPermission || false);
+  } catch (err: any) {
+    if (cancelled) return;
+    console.error('Error fetching document:', err);
+    setError(err.message || 'Failed to load document');
+    // Toast notification for error
+    toast.error('Failed to load document. Please try again.');
+  } finally {
+    if (!cancelled) setLoading(false);
+  }
+  return () => { cancelled = true; };
+}, [id]);
 
   useEffect(() => {
     if (user && id) {
@@ -130,15 +143,6 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
   const displayLastSaved = lastSaved ?? lastSavedState;
 
   // Handle logout
-  // const handleLogout = () => {
-  //   if (isDirty) {
-  //     const confirmed = window.confirm('You have unsaved changes. Leave anyway?');
-  //     if (!confirmed) return;
-  //   }
-  //   router.push('/login');
-  // };
-
-  // Find handleLogout (or handleBack if you are logging out from there) and change it to:
   const handleLogout = () => {
     signOut({ callbackUrl: '/login' }); // ✅ Real NextAuth logout
   };
@@ -358,9 +362,15 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
       {/* ── Editor Area ───────────────────────────────────────── */}
       <main className="flex-1 max-w-4xl w-full mx-auto px-8 py-8">
         <Editor
+          
           content={document.content}
           editable={isEditing}
-          onUpdate={isEditing ? handleContentUpdate : undefined}
+          onUpdate={handleContentUpdate} 
+          ydoc={ydoc || null}         
+          provider={provider || null}
+          user={{ name: user.name, color: user.avatar || '#4F46E5' }}
+          documentId={id}
+          ownerId={document.owner.id}
         />
       </main>
 
@@ -375,6 +385,8 @@ export default function EditorPage({ params }: { params: Promise<{ id: string }>
           }}
         />
       )}
+
+        {/* <WebsocketTest /> */}
     </div>
   );
 }

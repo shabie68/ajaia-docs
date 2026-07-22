@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
 import { parseFileToTipTap, validateFile } from '@/lib/fileParser';
+import { api } from '@/lib/api'; 
 
 export default function FileUploadButton() {
   const { user } = useAuth();
@@ -12,7 +13,7 @@ export default function FileUploadButton() {
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
 
@@ -37,24 +38,17 @@ export default function FileUploadButton() {
       // Parse to TipTap format
       const { json, title } = parseFileToTipTap(text, file.name);
 
-      // Create document via API
-      const res = await fetch('/api/documents', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.email,
-          title: title,
-          content: JSON.stringify(json),
-        }),
+      // ✅ Use the API client (and use user.id, not user.email!)
+      const doc = await api.createDocument({
+        userId: user.id, 
+        title: title,
+        content: JSON.stringify(json), // ✅ Pass the parsed content
       });
 
-      if (!res.ok) throw new Error('Failed to create document from file');
-      
-      const doc = await res.json();
       router.push(`/editor/${doc.id}`);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Upload error:', err);
-      setError('Failed to process file. Please try again.');
+      setError(err.message || 'Failed to process file. Please try again.');
       setTimeout(() => setError(null), 4000);
     } finally {
       setUploading(false);

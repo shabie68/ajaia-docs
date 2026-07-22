@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { DocumentShare } from '@/types/document';
+import { api } from '@/lib/api'; 
 
 // All available users (matches seed data)
 const ALL_USERS = [
@@ -27,23 +28,13 @@ export default function ShareModal({ documentId, currentShares, onClose }: Share
     (u) => !shares.some((s) => s.email === u.email)
   );
 
-  const handleShare = async (user: typeof ALL_USERS[0], permission: 'view' | 'edit') => {
+    const handleShare = async (user: typeof ALL_USERS[0], permission: 'view' | 'edit') => {
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/documents/share', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          documentId,
-          userEmail: user.email,
-          permission,
-        }),
-      });
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to share');
-      }
+      // ✅ Use API client
+      await api.shareDocument(documentId, user.email, permission);
+      
       setShares([
         ...shares,
         {
@@ -55,7 +46,7 @@ export default function ShareModal({ documentId, currentShares, onClose }: Share
         },
       ]);
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to share');
     } finally {
       setLoading(false);
     }
@@ -65,15 +56,11 @@ export default function ShareModal({ documentId, currentShares, onClose }: Share
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/documents/share', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentId, userEmail }),
-      });
-      if (!res.ok) throw new Error('Failed to remove');
+      // ✅ Use API client
+      await api.removeShare(documentId, userEmail);
       setShares(shares.filter((s) => s.email !== userEmail));
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to remove');
     } finally {
       setLoading(false);
     }
@@ -83,15 +70,11 @@ export default function ShareModal({ documentId, currentShares, onClose }: Share
     setLoading(true);
     setError(null);
     try {
-      const res = await fetch('/api/documents/share', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ documentId, userEmail, permission }),
-      });
-      if (!res.ok) throw new Error('Failed to update');
+      // ✅ Use API client
+      await api.updateSharePermission(documentId, userEmail, permission);
       setShares(shares.map((s) => (s.email === userEmail ? { ...s, permission } : s)));
     } catch (err: any) {
-      setError(err.message);
+      setError(err.message || 'Failed to update');
     } finally {
       setLoading(false);
     }
